@@ -13,7 +13,6 @@ const eslintConfig = [
       'pgdata/**',
       '.next/**',
       'node_modules/**',
-
     ],
   },
   {
