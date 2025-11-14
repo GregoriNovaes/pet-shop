@@ -12,6 +12,18 @@ const appointmentSchema = z.object({
   scheduleAt: z.date(),
 });
 
+function calculatePeriod(hour: number) {
+  const isMorning = hour >= 9 && hour < 12;
+  const isAfternoon = hour >= 13 && hour < 18;
+  const isEvening = hour >= 19 && hour < 21;
+
+  return {
+    isMorning,
+    isAfternoon,
+    isEvening,
+  };
+}
+
 type AppointmentData = z.infer<typeof appointmentSchema>;
 
 export async function createAppointment(data: AppointmentData) {
@@ -21,9 +33,7 @@ export async function createAppointment(data: AppointmentData) {
     const { scheduleAt } = parseData;
     const hour = scheduleAt.getHours();
 
-    const isMorning = hour >= 9 && hour < 12;
-    const isAfternoon = hour >= 13 && hour < 18;
-    const isEvening = hour >= 19 && hour < 21;
+    const { isMorning, isAfternoon, isEvening } = calculatePeriod(hour);
 
     if (!isMorning && !isAfternoon && !isEvening) {
       return {
@@ -53,13 +63,28 @@ export async function createAppointment(data: AppointmentData) {
     revalidatePath('/');
   } catch (error) {
     console.log(error);
+
+    return {
+      error: 'Erro ao criar um agendamento. Tente Novamente.',
+    };
   }
 }
 
 export async function updateAppointment(id: string, data: AppointmentData) {
   try {
     const parseData = appointmentSchema.parse(data);
+
     const { scheduleAt } = parseData;
+    const hour = scheduleAt.getHours();
+
+    const { isMorning, isAfternoon, isEvening } = calculatePeriod(hour);
+
+    if (!isMorning && !isAfternoon && !isEvening) {
+      return {
+        error:
+          'Agendamento só pode ser feitos entre 9h e 12h, 13h e 18h ou 19h e 21h.',
+      };
+    }
 
     const existingAppointment = await prisma.appointment.findFirst({
       where: {
@@ -88,5 +113,27 @@ export async function updateAppointment(id: string, data: AppointmentData) {
     revalidatePath('/');
   } catch (error) {
     console.log(error);
+
+    return {
+      error: 'Erro ao alterar o agendamento. Tente Novamente.',
+    };
+  }
+}
+
+export async function deleteAppointment(id: string) {
+  try {
+    await prisma.appointment.delete({
+      where: {
+        id,
+      },
+    });
+
+    revalidatePath('/');
+  } catch (error) {
+    console.log(error);
+
+    return {
+      error: 'Erro ao remover agendamento. Tente Novamente.',
+    };
   }
 }
